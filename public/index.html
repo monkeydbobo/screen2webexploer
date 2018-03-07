@@ -1,0 +1,99 @@
+<!doctype html>
+<html>
+<body>
+<canvas id="canvas0" style="border: 1px solid red;"></canvas>
+<canvas id="canvas1" style="border: 1px solid red;"></canvas>
+<canvas id="canvas2" style="border: 1px solid red;"></canvas>
+<canvas id="canvas3" style="border: 1px solid red;"></canvas>
+
+<script>
+
+    var portList = new Array()
+    /* 接收已经打开的端口信息*/
+    var ws = new WebSocket('ws://localhost:9011');
+    // 打开WebSocket连接后立刻发送一条消息:
+    ws.onopen = function(){
+        console.log(`[CLIENT] open(),PORT9011`);
+        ws.send('Hello!,I,am index');
+    }
+    /*jshint browser:true*/
+    var BLANK_IMG =
+        'data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw=='
+    //绑定canvas
+    var canvas0 = document.getElementById('canvas0')
+        , g0 = canvas0.getContext('2d')
+    var canvas1 = document.getElementById('canvas1')
+        , g1 = canvas1.getContext('2d')
+    var canvas2 = document.getElementById('canvas2')
+        , g2 = canvas2.getContext('2d')
+    var canvas3 = document.getElementById('canvas3')
+        , g3 = canvas3.getContext('2d')
+    var zoom_size = 0.35
+
+
+    var Draw = function (port,drawCanvas,Context,zoom_size) {
+        var linkPath = 'ws://localhost:'+port
+        var ws = new WebSocket(linkPath, 'minicap')
+        ws.binaryType = 'blob'
+        ws.onclose = function() {
+            console.log('onclose', arguments)
+        }
+        ws.onerror = function() {
+            console.log('onerror', arguments)
+        }
+        ws.onmessage = function(message) {
+            var blob = new Blob([message.data], {type: 'image/jpeg'})
+            var URL = window.URL || window.webkitURL
+            var img = new Image()
+            img.onload = function() {
+                console.log(img.width, img.height)
+
+                drawCanvas.width = img.width*zoom_size
+                drawCanvas.height = img.height*zoom_size
+                Context.scale(zoom_size,zoom_size)
+                Context.drawImage(img, 0, 0)
+
+                img.onload = null
+                img.src = BLANK_IMG
+                img = null
+                u = null
+                blob = null
+            }
+            var u = URL.createObjectURL(blob)
+            img.src = u
+            tmp_img = img
+        }
+
+        ws.onopen = function() {
+            console.log('onopen', arguments)
+            ws.send('1920x1080/0')
+        }
+    }
+
+    // 响应收到的消息:
+    ws.onmessage =  function (message) {
+        console.log(`[CLIENT] Received: ${message}`);
+        portList = message.data.split(',')
+        alert("list:"+ portList+",length:"+portList.length)
+        if (portList.length == 0){
+            alert("no devices connected");
+        } else {
+            drawDeivces(portList)
+        }
+    }
+
+    var testArr = new Array()
+    testArr[0] = 9002
+    testArr[1] = 9004
+    function drawDeivces(portList) {
+        for (var i=0;i<portList.length;i++){
+            var canvas_test = document.getElementById('canvas'+i)
+                ,g_test = canvas_test.getContext('2d')
+            new Draw(testArr[i],canvas_test,g_test,zoom_size)
+
+        }
+    }
+
+</script>
+</body>
+</html>
